@@ -1,0 +1,115 @@
+openapi: 3.1.0
+info:
+  title: Claude Product RL Environment API
+  version: 0.2.0
+  description: Deterministic Claude-like RL environment with resettable signed-in workflow state.
+servers:
+  - url: http://127.0.0.1:8000
+paths:
+  /api/state:
+    get:
+      summary: Fetch the observable environment state.
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+          required: false
+          description: Filter the visible conversation list.
+      responses:
+        '200':
+          description: Current state snapshot.
+  /api/reset:
+    post:
+      summary: Reset all mutable state to the seed.
+      responses:
+        '200':
+          description: Reset state snapshot.
+  /api/conversations/select:
+    post:
+      summary: Select a conversation in the sidebar.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_id]
+              properties:
+                conversation_id:
+                  type: string
+      responses:
+        '200':
+          description: Updated state snapshot.
+        '404':
+          description: Conversation not found.
+  /api/composer:
+    post:
+      summary: Update the composer draft.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                draft:
+                  type: string
+      responses:
+        '200':
+          description: Updated state snapshot.
+  /api/messages:
+    post:
+      summary: Submit a prompt and append a deterministic assistant reply.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [prompt]
+              properties:
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: Submitted message plus updated state.
+        '400':
+          description: Prompt missing.
+  /api/artifacts/open:
+    post:
+      summary: Open an artifact attached to the selected conversation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [artifact_id]
+              properties:
+                artifact_id:
+                  type: string
+      responses:
+        '200':
+          description: Updated state snapshot.
+        '404':
+          description: Artifact not found.
+  /api/feedback:
+    post:
+      summary: Record thumbs-up or thumbs-down feedback on a message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message_id]
+              properties:
+                message_id:
+                  type: string
+                rating:
+                  type: string
+                  enum: [thumbs_up, thumbs_down]
+      responses:
+        '200':
+          description: Feedback entry plus updated state.

@@ -1,0 +1,106 @@
+{
+  "workspace": {
+    "id": "ws_demo_claude",
+    "name": "Anthropic Product Research",
+    "current_user": {
+      "name": "Demo Aglit",
+      "email": "demoaglit@gmail.com"
+    }
+  },
+  "ui": {
+    "selectedConversationId": "conv_release_plan",
+    "searchQuery": "",
+    "openArtifactId": null
+  },
+  "composer": {
+    "draft": "Ship the launch note update once QA confirms the final checklist.",
+    "lastSubmittedPrompt": null,
+    "draftHistory": []
+  },
+  "feedback_log": [],
+  "conversations": [
+    {
+      "id": "conv_release_plan",
+      "title": "Claude launch checklist",
+      "summary": "Finalize launch artifacts and review assistant output.",
+      "pinned": true,
+      "updated_at": "2026-04-14T16:10:00Z",
+      "labels": ["Launch", "Priority"],
+      "messages": [
+        {
+          "id": "msg_1",
+          "role": "user",
+          "content": "Summarize the remaining launch blockers for the Claude desktop release.",
+          "created_at": "2026-04-14T16:00:00Z"
+        },
+        {
+          "id": "msg_2",
+          "role": "assistant",
+          "content": "Three blockers remain: verification of the macOS updater, final legal review for the release note, and confirmation that support macros are updated.",
+          "created_at": "2026-04-14T16:00:08Z"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": "artifact_checklist",
+          "title": "Launch checklist",
+          "kind": "text/markdown",
+          "content": "# Launch checklist\n- Verify updater health\n- Confirm release notes\n- Sync support macros\n- Publish status page update"
+        }
+      ]
+    },
+    {
+      "id": "conv_usage_review",
+      "title": "Usage review for workspace admins",
+      "summary": "Assess model mix and monthly spend variance.",
+      "pinned": false,
+      "updated_at": "2026-04-13T09:42:00Z",
+      "labels": ["Billing"],
+      "messages": [
+        {
+          "id": "msg_1",
+          "role": "user",
+          "content": "Draft a short note explaining why Sonnet usage increased this week.",
+          "created_at": "2026-04-13T09:40:00Z"
+        },
+        {
+          "id": "msg_2",
+          "role": "assistant",
+          "content": "Usage rose after support enabled a heavier triage workflow and engineering replayed production incidents in staging.",
+          "created_at": "2026-04-13T09:40:09Z"
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "id": "conv_prompt_debug",
+      "title": "Prompt regression triage",
+      "summary": "Investigate a failure in the refund agent instructions.",
+      "pinned": false,
+      "updated_at": "2026-04-12T21:18:00Z",
+      "labels": ["Quality"],
+      "messages": [
+        {
+          "id": "msg_1",
+          "role": "user",
+          "content": "Compare the current refund-agent prompt to last week's version and call out the risky change.",
+          "created_at": "2026-04-12T21:12:00Z"
+        },
+        {
+          "id": "msg_2",
+          "role": "assistant",
+          "content": "The new prompt removed the explicit requirement to confirm subscription status before offering a refund, which increases false-positive approvals.",
+          "created_at": "2026-04-12T21:12:11Z"
+        }
+      ],
+      "artifacts": [
+        {
+          "id": "artifact_diff",
+          "title": "Prompt diff notes",
+          "kind": "text/plain",
+          "content": "Removed guardrail: verify active subscription before refund. Added softer language about quick resolutions."
+        }
+      ]
+    }
+  ]
+}

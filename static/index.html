@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Product RL Environment</title>
+  <style>
+    :root {
+      --bg: #efe7d7;
+      --panel: #f9f4eb;
+      --line: #dbcdb5;
+      --text: #2b241d;
+      --muted: #6e6255;
+      --accent: #b35c24;
+      --accent-2: #ead5bf;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Iowan Old Style", serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #fffaf0, var(--bg));
+      min-height: 100vh;
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      min-height: 100vh;
+    }
+    .sidebar, .detail, .inspector { padding: 20px; }
+    .sidebar, .inspector { background: rgba(255,255,255,0.45); border-right: 1px solid var(--line); }
+    .inspector { border-right: none; border-left: 1px solid var(--line); }
+    .brand { font-size: 24px; margin: 0 0 6px; }
+    .muted { color: var(--muted); }
+    input, textarea, button {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: white;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font: inherit;
+      color: inherit;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      color: #fff8f0;
+      font-weight: 600;
+    }
+    button.secondary { background: var(--accent-2); color: var(--text); }
+    .stack { display: grid; gap: 12px; }
+    .conversation {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,0.7);
+      cursor: pointer;
+    }
+    .conversation.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .labels { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .label { padding: 3px 8px; border-radius: 999px; background: var(--accent-2); font-size: 12px; }
+    .messages { display: grid; gap: 12px; margin: 18px 0; }
+    .message {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: rgba(255,255,255,0.88);
+    }
+    .message.assistant { background: #fffaf5; }
+    .artifact {
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,0.6);
+      cursor: pointer;
+    }
+    pre {
+      white-space: pre-wrap;
+      font-family: "SF Mono", Menlo, monospace;
+      font-size: 12px;
+      background: #f5eee3;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    @media (max-width: 1100px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar, .inspector { border: none; border-bottom: 1px solid var(--line); }
+      .inspector { border-top: 1px solid var(--line); }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar stack">
+      <div>
+        <h1 class="brand">Claude Workspace</h1>
+        <div id="workspaceMeta" class="muted"></div>
+      </div>
+      <input id="search" placeholder="Search conversations">
+      <button class="secondary" id="resetButton">Reset environment</button>
+      <div id="conversationList" class="stack"></div>
+    </aside>
+    <main class="detail stack">
+      <div>
+        <h2 id="conversationTitle"></h2>
+        <div id="conversationSummary" class="muted"></div>
+      </div>
+      <div id="messageList" class="messages"></div>
+      <div class="stack">
+        <textarea id="draftInput" placeholder="Update the draft or submit a new prompt"></textarea>
+        <button id="saveDraftButton" class="secondary">Save draft</button>
+        <button id="submitButton">Submit prompt</button>
+      </div>
+    </main>
+    <aside class="inspector stack">
+      <div>
+        <h3>Artifacts</h3>
+        <div id="artifactList" class="stack"></div>
+      </div>
+      <div>
+        <h3>Open artifact</h3>
+        <pre id="artifactPreview">No artifact open.</pre>
+      </div>
+      <div>
+        <h3>Feedback log</h3>
+        <pre id="feedbackLog">[]</pre>
+      </div>
+    </aside>
+  </div>
+  <script>
+    let state = null;
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+      });
+      return response.json();
+    }
+
+    function messageActions(message) {
+      if (message.role !== 'assistant') return '';
+      return `<div style="margin-top:10px;display:flex;gap:8px;">
+        <button class="secondary" data-feedback="thumbs_up" data-message="${message.id}">Thumbs up</button>
+        <button class="secondary" data-feedback="thumbs_down" data-message="${message.id}">Thumbs down</button>
+      </div>`;
+    }
+
+    function renderConversationList() {
+      const root = document.getElementById('conversationList');
+      root.innerHTML = '';
+      state.visible_conversations.forEach((conversation) => {
+        const el = document.createElement('button');
+        el.className = 'conversation' + (conversation.id === state.current_conversation_id ? ' active' : '');
+        el.innerHTML = `<strong>${conversation.title}</strong><div class="muted">${conversation.summary}</div><div class="labels">${conversation.labels.map((label) => `<span class="label">${label}</span>`).join('')}</div>`;
+        el.onclick = async () => {
+          state = await api('/api/conversations/select', { method: 'POST', body: JSON.stringify({ conversation_id: conversation.id }) });
+          render();
+        };
+        root.appendChild(el);
+      });
+    }
+
+    function renderConversation() {
+      document.getElementById('workspaceMeta').textContent = `${state.workspace.name} · ${state.workspace.current_user.email}`;
+      document.getElementById('conversationTitle').textContent = state.conversation.title;
+      document.getElementById('conversationSummary').textContent = `${state.conversation.summary} · Updated ${state.conversation.updated_at}`;
+      document.getElementById('draftInput').value = state.composer.draft;
+      const list = document.getElementById('messageList');
+      list.innerHTML = state.conversation.messages.map((message) => `
+        <div class="message ${message.role}">
+          <strong>${message.role}</strong>
+          <div class="muted">${message.created_at}</div>
+          <p>${message.content}</p>
+          ${messageActions(message)}
+        </div>
+      `).join('');
+      list.querySelectorAll('[data-feedback]').forEach((button) => {
+        button.onclick = async () => {
+          const result = await api('/api/feedback', {
+            method: 'POST',
+            body: JSON.stringify({ message_id: button.dataset.message, rating: button.dataset.feedback })
+          });
+          state = result.state;
+          render();
+        };
+      });
+    }
+
+    function renderArtifacts() {
+      const list = document.getElementById('artifactList');
+      list.innerHTML = '';
+      if (!state.conversation.artifacts.length) {
+        list.innerHTML = '<div class="muted">No artifacts for this conversation.</div>';
+      } else {
+        state.conversation.artifacts.forEach((artifact) => {
+          const el = document.createElement('button');
+          el.className = 'artifact';
+          el.innerHTML = `<strong>${artifact.title}</strong><div class="muted">${artifact.kind}</div>`;
+          el.onclick = async () => {
+            state = await api('/api/artifacts/open', { method: 'POST', body: JSON.stringify({ artifact_id: artifact.id }) });
+            render();
+          };
+          list.appendChild(el);
+        });
+      }
+      document.getElementById('artifactPreview').textContent = state.open_artifact ? state.open_artifact.content : 'No artifact open.';
+      document.getElementById('feedbackLog').textContent = JSON.stringify(state.feedback_log, null, 2);
+    }
+
+    function render() {
+      renderConversationList();
+      renderConversation();
+      renderArtifacts();
+    }
+
+    async function load(search = '') {
+      state = await api(`/api/state?search=${encodeURIComponent(search)}`);
+      render();
+    }
+
+    document.getElementById('search').addEventListener('input', (event) => load(event.target.value));
+    document.getElementById('saveDraftButton').onclick = async () => {
+      state = await api('/api/composer', {
+        method: 'POST',
+        body: JSON.stringify({ draft: document.getElementById('draftInput').value })
+      });
+      render();
+    };
+    document.getElementById('submitButton').onclick = async () => {
+      const result = await api('/api/messages', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: document.getElementById('draftInput').value })
+      });
+      if (result.state) {
+        state = result.state;
+        render();
+      }
+    };
+    document.getElementById('resetButton').onclick = async () => {
+      state = await api('/api/reset', { method: 'POST', body: '{}' });
+      render();
+    };
+
+    load();
+  </script>
+</body>
+</html>
