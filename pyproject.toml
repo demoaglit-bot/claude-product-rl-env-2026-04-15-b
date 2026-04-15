@@ -1,0 +1,6 @@
+[project]
+name = "claude-product-rl-env"
+version = "0.1.0"
+description = "Deterministic Claude RL environment demo"
+requires-python = ">=3.12"
+dependencies = []
